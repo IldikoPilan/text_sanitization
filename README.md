@@ -13,6 +13,8 @@ guided Truthful sAnitization for Clear Text (INTACT), currently being submitted 
 - requirements.txt: dependencies
 - TAB_sanitized.zip: the sanitized version of the Text Anonymization Benchmark (TAB) dataset. The original TAB dataset can be downloaded from [here](https://github.com/NorskRegnesentral/text-anonymization-benchmark).
 - manual_eval_data_spec_truth.xlsx: a subset of sanitized TAB with manual evaluation scores for replacement specificity nand truthfulness.
+- eval_TPS.py: 
+- eval_doc_clustering.py: 
 
 ## Data format
 
@@ -36,4 +38,15 @@ python replacements.py -d text-anonymization-benchmark/echr_dev.json -max 3 -out
 
 ```{python}
 python guess.py -d TAB_dev_repl.json -out TAB_dev_sel_repl.json
+```
+
+3) Evaluation with TPS of the previous replacement selection process:
+
+```{python}
+python eval_TPS.py text-anonymization-benchmark/echr_dev.json TAB_dev_sel_repl.json
+```
+
+4) Evaluation with document clustering of a set anonymizations in a Pandas dataframe:
+```{python}
+python eval_doc_clustering.py TAB_dev_df.json doc_id
 ```
