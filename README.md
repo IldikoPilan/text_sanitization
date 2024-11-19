@@ -48,5 +48,5 @@ python eval_TPS.py text-anonymization-benchmark/echr_dev.json TAB_dev_sel_repl.j
 
 4) Evaluation with document clustering of a set anonymizations in a Pandas dataframe:
 ```{python}
-python eval_doc_clustering.py TAB_dev_df.json doc_id
+python eval_doc_clustering.py TAB_dev_df.json
 ```
