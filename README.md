@@ -12,7 +12,8 @@ guided Truthful sAnitization for Clear Text (INTACT), currently being submitted 
 - freq_words.json: most frequent words from the training set of TAB (matches between a guess and the original span are allowed for these words)
 - requirements.txt: dependencies
 - TAB_all_INTACT.zip: the sanitized version of the Text Anonymization Benchmark (TAB) dataset using INTACT and two other state-of-the-art baselines: GPT 3.5-generated replacements with [Presidio](https://github.com/microsoft/presidio/blob/main/docs/samples/python/synth_data_with_openai.ipynb) and the self-disclosure abstraction model from [Dou el al. (2024)](https://huggingface.co/douy/Llama-2-7B-lora-instruction-ft-abstraction-three-span). The original TAB dataset can be downloaded from [here](https://github.com/NorskRegnesentral/text-anonymization-benchmark).
-- manual_eval_data_spec_truth.xlsx: a subset of sanitized TAB with manual evaluation scores for replacement specificity nand truthfulness.
+- manual_eval_data_spec_truth_INTACT.xlsx: a subset of TAB sanitized with INTACT and manually evaluated for specificity and truthfulness.
+- manual_eval_data_spec_truth_Dou.xlsx: a subset of TAB sanitized with Dou et al.'s model and manually evaluated for specificity and truthfulness.
 - eval_TPS.py: replacements utility evaluation using the Text Preserved Similarity (TPS) metric proposed in the paper.
 - eval_doc_clustering.py: replacements utility evaluation using the document clustering downstream task.
 
