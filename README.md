@@ -11,20 +11,24 @@ guided Truthful sAnitization for Clear Text (INTACT), currently being submitted 
 - guess.py: replacement selection (based on inference attack and matching LLM guesses to original text spans)
 - freq_words.json: most frequent words from the training set of TAB (matches between a guess and the original span are allowed for these words)
 - requirements.txt: dependencies
-- TAB_sanitized.zip: the sanitized version of the Text Anonymization Benchmark (TAB) dataset. The original TAB dataset can be downloaded from [here](https://github.com/NorskRegnesentral/text-anonymization-benchmark).
+- TAB_all_INTACT.zip: the sanitized version of the Text Anonymization Benchmark (TAB) dataset using INTACT and two other state-of-the-art baselines: GPT 3.5-generated replacements with [Presidio](https://github.com/microsoft/presidio/blob/main/docs/samples/python/synth_data_with_openai.ipynb) and the self-disclosure abstraction model from [Dou el al. (2024)](https://huggingface.co/douy/Llama-2-7B-lora-instruction-ft-abstraction-three-span). The original TAB dataset can be downloaded from [here](https://github.com/NorskRegnesentral/text-anonymization-benchmark).
 - manual_eval_data_spec_truth.xlsx: a subset of sanitized TAB with manual evaluation scores for replacement specificity nand truthfulness.
 - eval_TPS.py: replacements utility evaluation using the Text Preserved Similarity (TPS) metric proposed in the paper.
 - eval_doc_clustering.py: replacements utility evaluation using the document clustering downstream task.
 
 ## Data format
 
-The sanitized TAB has the following additional attributes compared to the original TAB:
+The sanitized TAB file (TAB_all_INTACT.zip) has the following additional attributes compared to the original TAB corpus:
 
 | Variable name      | Description       |
 |----------------|----------------|
-| replacements_mistral (or replacements_rulebased)  | Replacement candidates generated with a Mistral language model (or based on heuristics).  |
-| selected_replacement  | The selected replacement out of the candidates listed under 'replacements_*'  |
-| guesses_sel_repl  | The results of the inference attack for the selected replacement.  |
+| intact_mistral_candidates (or intact_rulebased_candidates)  | Replacement candidates generated with a Mistral language model (or based on heuristics).  |
+| intact_replacement  | The selected replacement out of the candidates listed under 'intact_*_candidates'.  |
+| intact_guesses  | The results of the inference attack for the selected replacement.  |
+| presidio_replacement | The Presidio (GPT 3.5-generated) replacement. |
+| dou_candidates | The abstractions generated with Dou et al. (2024). |
+| dou_random_replacement | The randomly selected replacement out of 'dou_candidates'.|
+
 
 ## Example calls 
 
