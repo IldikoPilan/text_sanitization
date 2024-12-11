@@ -7,6 +7,8 @@ from tqdm.autonotebook import tqdm
 import spacy
 import intervaltree
 from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer, AutoModelForMaskedLM
+import torch
 
 
 # POS tags, tokens or characters that can be ignored from the recall scores 
@@ -119,6 +121,7 @@ class GoldCorpus:
     def get_TPS(self, masked_docs:List[MaskedDocument], token_weighting: TokenWeighting,
                 word_alterning=6, sim_model_name="paraphrase-albert-base-v2", use_chunking=True):
         tps_array = np.empty(len(masked_docs))
+        all_similarities = []
         
         # Load embedding model and function for similarity
         embedding_func = self._get_embedding_func(sim_model_name)
@@ -148,21 +151,26 @@ class GoldCorpus:
                 masked_embedds = embeddings[:len(masked_texts)]
                 repl_embedds = embeddings[len(masked_texts):]
                 for masked_embed, repl_embed, spans_idxs in zip(masked_embedds, repl_embedds, spans_idxs_per_replacement):
-                    spans_sims[spans_idxs] = self._cos_sim(masked_embed, repl_embed)
+                    similarity = self._cos_sim(masked_embed, repl_embed)
+                    spans_sims[spans_idxs] = similarity
+                    all_similarities.append(similarity)
                 
                 # Limit similarities to range [0,1]
                 spans_sims[spans_sims < 0] = 0
                 spans_sims[spans_sims > 1] = 1
 
             # Get TPS
-            masked_TPI = (spans_IC * spans_sims).sum()
-            original_TPI = spans_IC.sum()
-            tps_array[i] = masked_TPI / original_TPI
+            masked_TIC_sim = (spans_IC * spans_sims).sum()
+            original_TIC = spans_IC.sum()
+            tps_array[i] = masked_TIC_sim / original_TIC
 
         # Get mean TPS
-        tps = tps_array.mean() 
+        tps = tps_array.mean()
 
-        return tps, tps_array    
+        # All similarities to NumPy array
+        all_similarities = np.array(all_similarities)
+
+        return tps, tps_array, all_similarities 
 
 
     def _get_terms_spans(self, spacy_doc: spacy.tokens.Doc, use_chunking: bool=True) -> list:
@@ -187,7 +195,7 @@ class GoldCorpus:
                     added_tokens[chunk.start:chunk.end] = True
                 
 
-        # Add text spans after chunks (or all spans, if chunks are ignored)
+        # Add text spans after last chunk (or all spans, if chunks are ignored)
         for token_idx in range(len(spacy_doc)):
             if not added_tokens[token_idx]:
                 token = spacy_doc[token_idx]            
@@ -518,7 +526,7 @@ class GoldDocument:
     def split_by_tokens(self, start: int, end: int):
         """Generates the (start, end) boundaries of each token included in this span"""
         
-        for match in re.finditer("\w+", self.text[start:end]):
+        for match in re.finditer(r"\w+", self.text[start:end]):
             start_token = start + match.start(0)
             end_token = start + match.end(0)
             yield start_token, end_token
@@ -534,14 +542,10 @@ class BertTokenWeighting(TokenWeighting):
     be predicted from its content will received a low weight. """
     
     def __init__(self, max_segment_size = 100):
-        """Initialises the BERT tokenizers and masked language model"""
-        
-        from transformers import BertTokenizerFast, BertForMaskedLM
-        self.tokeniser = BertTokenizerFast.from_pretrained('bert-base-uncased')
-
-        import torch
+        """Initialises the BERT tokenizers and masked language model"""        
+        self.tokeniser = AutoTokenizer.from_pretrained('google-bert/bert-base-uncased')
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.model = BertForMaskedLM.from_pretrained('bert-base-uncased')
+        self.model = AutoModelForMaskedLM.from_pretrained('google-bert/bert-base-uncased', trust_remote_code=True)
         self.model = self.model.to(self.device)
         
         self.max_segment_size = max_segment_size
@@ -554,8 +558,6 @@ class BertTokenWeighting(TokenWeighting):
         
         If the span corresponds to several BERT tokens, the probability is the 
         product of the probabilities for each token."""
-        
-        import torch
         
         # STEP 1: we tokenise the text
         bert_tokens = self.tokeniser(text, return_offsets_mapping=True)
@@ -633,7 +635,6 @@ class BertTokenWeighting(TokenWeighting):
         If the input length is longer than max_segment size, we split the document in
         small segments, and then concatenate the model predictions for each segment."""
         
-        import torch
         nb_tokens = len(input_ids)
         
         input_ids = torch.tensor(input_ids)[None,:].to(self.device)
@@ -700,7 +701,7 @@ def get_masked_docs_from_file(masked_output_file:str):
         masked_docs.append(doc)
         
     return masked_docs
-    
+
 
 if __name__ == "__main__":
     # Arguments parsing
@@ -731,13 +732,14 @@ if __name__ == "__main__":
 
         # Compute TPS
         print("Computing evaluation metrics for", masked_output_file, "(%i documents)"%len(masked_docs))
-        tps, tps_array = gold_corpus.get_TPS(masked_docs, weighting_scheme, word_alterning=word_alterning, sim_model_name=sim_model_name)           
+        tps, tps_array, all_similarities = gold_corpus.get_TPS(masked_docs, weighting_scheme, word_alterning=word_alterning, sim_model_name=sim_model_name)           
         tps_std = tps_array.std()
+        mean_sim = all_similarities.mean()
 
         # Print results
-        print(f"==> {title}: {tps:3f}±{tps_std:3f}")
+        print(f"==> {title}: {tps:3f}±{tps_std:3f} | Mean similarity:{mean_sim:.3f}")
 
         # Results to file
         datetime_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(RESULTS_FILENAME, "a+") as f:
-            f.write(f"{datetime_str},{title},{tps},{tps_std}\n")
+            f.write(f"{datetime_str},{title},{tps},{tps_std},{mean_sim}\n")
